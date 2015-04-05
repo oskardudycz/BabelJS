@@ -18,7 +18,8 @@
     "url": "https://github.com/oskardudycz/BabelJS/issues"
   },
   "homepage": "https://github.com/oskardudycz/BabelJS",
-  "dependencies": {
-    "gulp": "^3.8.11"
+  "devDependencies": {
+    "gulp": "^3.8.11",
+    "gulp-babel": "^5.0.0"
   }
 }
