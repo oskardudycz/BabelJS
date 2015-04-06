@@ -20,6 +20,8 @@
   "homepage": "https://github.com/oskardudycz/BabelJS",
   "devDependencies": {
     "gulp": "^3.8.11",
-    "gulp-babel": "^5.0.0"
+    "gulp-babel": "^5.0.0",
+    "gulp-dest": "^0.2.2",
+    "gulp-rename": "^1.2.2"
   }
 }
