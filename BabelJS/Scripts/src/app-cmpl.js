@@ -11,7 +11,7 @@ var View = (function () {
         this.model = options.model;
         this.template = options.template;
 
-        console.log('test');
+        console.log('test3');
     }
 
     _createClass(View, [{
