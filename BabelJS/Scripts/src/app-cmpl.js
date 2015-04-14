@@ -8,6 +8,13 @@ var _classCallCheck = function (instance, Constructor) { if (!(instance instance
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
+function bind(func, fixThis) {
+    // using custom bind for simplicity
+    return function () {
+        return func.apply(fixThis, arguments);
+    };
+}
+
 var Excalibur = (function () {
     function Excalibur() {
         _classCallCheck(this, Excalibur);
@@ -25,30 +32,48 @@ var Excalibur = (function () {
     }, {
         key: 'RenderViewModel',
         value: function RenderViewModel(viewModel, $jq) {
-            var template = ViewLocator.Instance().getViewFor(viewModel).getHtml();
+            var $template = $(ViewLocator.Instance().getViewFor(viewModel).getHtml());
 
             var _iteratorNormalCompletion = true;
             var _didIteratorError = false;
             var _iteratorError = undefined;
 
             try {
-                for (var _iterator = Object.getOwnPropertyNames(viewModel.__proto__)[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                var _loop = function () {
                     var key = _step.value;
 
-                    if (key == 'constructor') continue;
+                    if (key == 'constructor') return 'continue';
 
                     var val = viewModel[key];
                     console.log(key);
 
                     if (viewModel[key] instanceof Array) {
-                        console.log('array');
-                        continue;
-                    }
+                        elements = $('');
+                        items = viewModel[key].map(function (vm) {
+                            return Excalibur.RenderViewModel(vm);
+                        });
 
-                    if (viewModel[key] instanceof Function) {
+                        items.forEach(function (f) {
+                            return $template.find('#' + key).before(f);
+                        });
+
+                        $template.find('#' + key).remove();
+                    } else if (viewModel[key] instanceof Function) {
+                        $template.find('#' + key)[0].onclick = bind(viewModel[key], viewModel);
                         console.log('function');
-                        continue;
+                    } else {
+                        $template.find('#' + key).text(viewModel[key]);
+                        $template.find('#' + key + ':input').text(viewModel[key]);
                     }
+                };
+
+                for (var _iterator = Object.getOwnPropertyNames(viewModel.__proto__)[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                    var elements;
+                    var items;
+
+                    var _ret = _loop();
+
+                    if (_ret === 'continue') continue;
                 }
             } catch (err) {
                 _didIteratorError = true;
@@ -65,7 +90,8 @@ var Excalibur = (function () {
                 }
             }
 
-            return template;
+            viewModel.bind($template);
+            return $template;
         }
     }, {
         key: 'RenderArray',
@@ -96,9 +122,16 @@ var ViewModel = (function () {
     }
 
     _createClass(ViewModel, [{
+        key: 'bind',
+        value: function bind($template) {
+            this._template = $template;
+        }
+    }, {
         key: 'notifyOfPropertyChange',
         value: function notifyOfPropertyChange(propertyName) {
             console.log('' + propertyName + ' has been changed');
+            this._template.find('#' + propertyName).text(this[propertyName]);
+            this._template.find('#' + propertyName + ':input').val(this[propertyName]);
         }
     }]);
 
@@ -117,7 +150,7 @@ var LinkView = (function (_View) {
     _createClass(LinkView, [{
         key: 'getHtml',
         value: function getHtml() {
-            return '<div>item</div>';
+            return '<div  class="list-group-item"> <h3 class="list-group-item-heading">   <span class="glyphicon glyphicon-plus-sign  pull-right" id="inrementRating"/><span id="link"/></h3><div> <h4 class="list-group-item-text"><span class="badge pull-right" id="rating"></span><span id="author"></span></h4>  </div>';
         }
     }]);
 
@@ -175,7 +208,7 @@ var LinksListView = (function (_View2) {
     _createClass(LinksListView, [{
         key: 'getHtml',
         value: function getHtml() {
-            return '<div>test</div>';
+            return '<div><h1 id="header"/> <ul class="list-group"><foreach id="linksList"></ul></foreach> </div>';
         }
     }]);
 
@@ -214,7 +247,7 @@ var LinksListViewModel = (function (_ViewModel2) {
         _classCallCheck(this, LinksListViewModel);
 
         _get(Object.getPrototypeOf(LinksListViewModel.prototype), 'constructor', this).call(this);
-        this._linksList = [new LinkViewModel(), new LinkViewModel()];
+        this._linksList = [new LinkViewModel('link1', 'author1'), new LinkViewModel('link2', 'author2')];
     }
 
     _inherits(LinksListViewModel, _ViewModel2);
@@ -229,18 +262,15 @@ var LinksListViewModel = (function (_ViewModel2) {
         get: function () {
             return this._linksList;
         }
-    }, {
-        key: 'getSth',
-        value: function getSth() {
-            return 'ddd';
-        }
+
+        //getSth(){
+        //    return 'ddd';
+        //}
+
     }]);
 
     return LinksListViewModel;
 })(ViewModel);
-
-var link = new LinkViewModel('link', 'author');
-link.inrementRating();
 
 $(document).ready(function () {
     Excalibur.Bind(new LinksListViewModel());
