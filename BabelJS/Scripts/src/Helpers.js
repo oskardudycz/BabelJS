@@ -1,4 +1,4 @@
-﻿function bind(func, fixThis) { // using custom bind for simplicity
+﻿export function bind(func, fixThis) { // using custom bind for simplicity
     return function() {
         return func.apply(fixThis, arguments)
     }
@@ -8,7 +8,7 @@ Node = Node || {
     COMMENT_NODE: 8
 };
 
-function findComments(elem) {
+export function findComments(elem) {
     var children = elem.childNodes;
     var comments = [];
 
@@ -23,7 +23,7 @@ function findComments(elem) {
     return comments;
 }
 
-function findBindingComments($elem, bindingName, variableName){
+export function findBindingComments($elem, bindingName, variableName){
     var comments = findComments($elem[0]);
     var bindingCommentStart = ` ${bindingName} ${variableName} `;
     var bindingCommentEnd = ` /${bindingName} ${variableName} `;

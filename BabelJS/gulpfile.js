@@ -10,7 +10,7 @@ var condition = function (file) {
 
 gulp.task("default", function () {
     return gulp.src(["Scripts/src/*.js", "!Scripts/src/*-cmpl.js"])
-      .pipe(babel())
+      .pipe(babel({modules:'amd', moduleIds:true}))
       .pipe(rename(function (path) {
           path.basename += "-cmpl";
       }))
