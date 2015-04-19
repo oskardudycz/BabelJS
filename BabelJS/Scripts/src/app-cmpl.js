@@ -15,7 +15,6 @@ function bind(func, fixThis) {
     };
 }
 
-// Thanks to Yoshi
 Node = Node || {
     COMMENT_NODE: 8
 };
@@ -37,8 +36,8 @@ function findComments(elem) {
 
 function findBindingComments($elem, bindingName, variableName) {
     var comments = findComments($elem[0]);
-    var bindingCommentStart = ' ' + bindingName + ' in ' + variableName + ' ';
-    var bindingCommentEnd = ' /' + bindingName + ' in ' + variableName + ' ';
+    var bindingCommentStart = ' ' + bindingName + ' ' + variableName + ' ';
+    var bindingCommentEnd = ' /' + bindingName + ' ' + variableName + ' ';
 
     var startTag;
     var endTag;
@@ -79,11 +78,11 @@ var Excalibur = (function () {
     _createClass(Excalibur, null, [{
         key: 'Bind',
         value: function Bind(rootViewModel) {
-            var selector = arguments[1] === undefined ? '#exContainer' : arguments[1];
+            var templateName = arguments[1] === undefined ? 'main' : arguments[1];
 
-            var $jq = $(selector);
-            $jq.empty();
-            $jq.append(Excalibur.RenderViewModel(rootViewModel, $jq));
+            var tags = findBindingComments($('body'), 'template', templateName);
+            var $jq = $(tags[0]);
+            $jq.after(Excalibur.RenderViewModel(rootViewModel, $jq));
         }
     }, {
         key: 'RenderViewModel',
@@ -107,7 +106,7 @@ var Excalibur = (function () {
                     var val = viewModel[key];
 
                     if (val instanceof Array) {
-                        var tags = findBindingComments($template, 'foreach', key);
+                        var tags = findBindingComments($template, 'foreach in', key);
                         var $endTag = $(tags[1]);
 
                         val.map(function (vm) {
@@ -179,12 +178,40 @@ var ViewModel = (function () {
         key: 'notifyOfPropertyChange',
         value: function notifyOfPropertyChange(propertyName) {
             console.log('' + propertyName + ' has been changed');
-            this._template.find('#{propertyName}').text(this[propertyName]);
-            this._template.find('#{propertyName}:input').val(this[propertyName]);
+
+            this._template.find('#' + propertyName).text(this[propertyName]);
+            this._template.find('#' + propertyName + ':input').val(this[propertyName]);
         }
     }]);
 
     return ViewModel;
+})();
+
+var ViewLocator = (function () {
+    function ViewLocator() {
+        _classCallCheck(this, ViewLocator);
+
+        this.LinksListView = new LinksListView();
+        this.LinkView = new LinkView();
+    }
+
+    _createClass(ViewLocator, [{
+        key: 'getViewFor',
+        value: function getViewFor(viewModel) {
+            var viewModelName = viewModel.constructor.name;
+
+            var viewName = viewModelName.toString().replace('Model', '');
+
+            return this[viewName];
+        }
+    }], [{
+        key: 'Instance',
+        value: function Instance() {
+            return new ViewLocator();
+        }
+    }]);
+
+    return ViewLocator;
 })();
 
 var LinkView = (function (_View) {
@@ -264,33 +291,6 @@ var LinksListView = (function (_View2) {
     return LinksListView;
 })(View);
 
-var ViewLocator = (function () {
-    function ViewLocator() {
-        _classCallCheck(this, ViewLocator);
-
-        this.LinksListView = new LinksListView();
-        this.LinkView = new LinkView();
-    }
-
-    _createClass(ViewLocator, [{
-        key: 'getViewFor',
-        value: function getViewFor(viewModel) {
-            var viewModelName = viewModel.constructor.name;
-
-            var viewName = viewModelName.toString().replace('Model', '');
-
-            return this[viewName];
-        }
-    }], [{
-        key: 'Instance',
-        value: function Instance() {
-            return new ViewLocator();
-        }
-    }]);
-
-    return ViewLocator;
-})();
-
 var LinksListViewModel = (function (_ViewModel2) {
     function LinksListViewModel() {
         _classCallCheck(this, LinksListViewModel);
@@ -311,11 +311,6 @@ var LinksListViewModel = (function (_ViewModel2) {
         get: function () {
             return this._linksList;
         }
-
-        //getSth(){
-        //    return 'ddd';
-        //}
-
     }]);
 
     return LinksListViewModel;

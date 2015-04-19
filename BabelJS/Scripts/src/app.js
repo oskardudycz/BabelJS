@@ -4,7 +4,6 @@
     }
 }
 
-// Thanks to Yoshi
 Node = Node || {
     COMMENT_NODE: 8
 };
@@ -26,14 +25,13 @@ function findComments(elem) {
 
 function findBindingComments($elem, bindingName, variableName){
     var comments = findComments($elem[0]);
-    var bindingCommentStart = ` ${bindingName} in ${variableName} `
-    var bindingCommentEnd = ` /${bindingName} in ${variableName} `
-
-
+    var bindingCommentStart = ` ${bindingName} ${variableName} `;
+    var bindingCommentEnd = ` /${bindingName} ${variableName} `;
+    
     var startTag;
     var endTag;
 
-    for(var comm of comments){
+    for(var comm of comments) {
         if(comm.nodeValue == bindingCommentStart)
             startTag = comm;
         else if (comm.nodeValue == bindingCommentEnd)
@@ -45,14 +43,13 @@ function findBindingComments($elem, bindingName, variableName){
 
 
 class Excalibur {
-    static Bind(rootViewModel, selector = '#exContainer') {
-        var $jq = $(selector);
-        $jq.empty()
-        $jq.append(Excalibur.RenderViewModel(rootViewModel, $jq));
+    static Bind(rootViewModel, templateName = 'main') {
+        
+        var tags = findBindingComments($('body'), 'template', templateName);
+        var $jq = $(tags[0]);
+        $jq.after(Excalibur.RenderViewModel(rootViewModel, $jq));
     }
-
-
- 
+     
     static RenderViewModel(viewModel, $jq) {
         var $template  = $(ViewLocator.Instance().getViewFor(viewModel).getHtml());
    
@@ -67,7 +64,7 @@ class Excalibur {
             let val = viewModel[key];
 
             if(val instanceof Array){
-                var tags = findBindingComments($template, 'foreach', key);
+                var tags = findBindingComments($template, 'foreach in', key);
                 var $endTag = $(tags[1])
 
                 val.map(vm => Excalibur.RenderViewModel(vm))
@@ -104,8 +101,28 @@ class ViewModel {
     }
     notifyOfPropertyChange(propertyName){
         console.log(`${propertyName} has been changed`);
-        this._template.find(`#{propertyName}`).text(this[propertyName]);
-        this._template.find(`#{propertyName}:input`).val(this[propertyName]);
+
+        this._template.find(`#${propertyName}`).text(this[propertyName]);
+        this._template.find(`#${propertyName}:input`).val(this[propertyName]);
+    }
+}
+
+class ViewLocator {
+    constructor(){
+        this.LinksListView = new LinksListView();
+        this.LinkView = new LinkView();
+    }
+
+    getViewFor(viewModel){
+        var viewModelName = viewModel.constructor.name;
+
+        var viewName = viewModelName.toString().replace('Model', '');
+
+        return this[viewName];
+    }
+
+    static Instance(){
+        return new ViewLocator();
     }
 }
 
@@ -172,25 +189,6 @@ class LinksListView extends View {
     }
 }
 
-class ViewLocator {
-    constructor(){
-        this.LinksListView = new LinksListView();
-        this.LinkView = new LinkView();
-    }
-
-    getViewFor(viewModel){
-        var viewModelName = viewModel.constructor.name;
-
-        var viewName = viewModelName.toString().replace('Model', '');
-
-        return this[viewName];
-    }
-
-    static Instance(){
-        return new ViewLocator();
-    }
-}
-
 class LinksListViewModel extends ViewModel {
     constructor(){
         super();
@@ -204,10 +202,6 @@ class LinksListViewModel extends ViewModel {
     get linksList(){
         return this._linksList;
     }
-  
-    //getSth(){
-    //    return 'ddd';
-    //}
 }
 
 $(document).ready(function() {
