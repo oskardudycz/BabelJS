@@ -15,6 +15,62 @@ function bind(func, fixThis) {
     };
 }
 
+// Thanks to Yoshi
+Node = Node || {
+    COMMENT_NODE: 8
+};
+
+function findComments(elem) {
+    var children = elem.childNodes;
+    var comments = [];
+
+    for (var i = 0, len = children.length; i < len; i++) {
+        if (children[i].nodeType == Node.COMMENT_NODE) {
+            comments.push(children[i]);
+        }
+        if (children[i].childNodes.length >= 0) {
+            comments = comments.concat(findComments(children[i]));
+        }
+    }
+    return comments;
+}
+
+function findBindingComments($elem, bindingName, variableName) {
+    var comments = findComments($elem[0]);
+    var bindingCommentStart = ' ' + bindingName + ' in ' + variableName + ' ';
+    var bindingCommentEnd = ' /' + bindingName + ' in ' + variableName + ' ';
+
+    var startTag;
+    var endTag;
+
+    var _iteratorNormalCompletion = true;
+    var _didIteratorError = false;
+    var _iteratorError = undefined;
+
+    try {
+        for (var _iterator = comments[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+            var comm = _step.value;
+
+            if (comm.nodeValue == bindingCommentStart) startTag = comm;else if (comm.nodeValue == bindingCommentEnd) endTag = comm;
+        }
+    } catch (err) {
+        _didIteratorError = true;
+        _iteratorError = err;
+    } finally {
+        try {
+            if (!_iteratorNormalCompletion && _iterator['return']) {
+                _iterator['return']();
+            }
+        } finally {
+            if (_didIteratorError) {
+                throw _iteratorError;
+            }
+        }
+    }
+
+    return [startTag, endTag];
+}
+
 var Excalibur = (function () {
     function Excalibur() {
         _classCallCheck(this, Excalibur);
@@ -34,58 +90,51 @@ var Excalibur = (function () {
         value: function RenderViewModel(viewModel, $jq) {
             var $template = $(ViewLocator.Instance().getViewFor(viewModel).getHtml());
 
-            var _iteratorNormalCompletion = true;
-            var _didIteratorError = false;
-            var _iteratorError = undefined;
+            var _iteratorNormalCompletion2 = true;
+            var _didIteratorError2 = false;
+            var _iteratorError2 = undefined;
 
             try {
-                var _loop = function () {
-                    var key = _step.value;
+                for (var _iterator2 = Object.getOwnPropertyNames(viewModel.__proto__)[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                    var key = _step2.value;
 
-                    if (key == 'constructor') return 'continue';
+                    if (key == 'constructor') continue;
 
-                    var val = viewModel[key];
                     console.log(key);
 
-                    if (viewModel[key] instanceof Array) {
-                        elements = $('');
-                        items = viewModel[key].map(function (vm) {
+                    var $element = $template.find('#' + key);
+
+                    var val = viewModel[key];
+
+                    if (val instanceof Array) {
+                        var tags = findBindingComments($template, 'foreach', key);
+                        var $endTag = $(tags[1]);
+
+                        val.map(function (vm) {
                             return Excalibur.RenderViewModel(vm);
+                        }).forEach(function (f) {
+                            return $endTag.before(f);
                         });
-
-                        items.forEach(function (f) {
-                            return $template.find('#' + key).before(f);
-                        });
-
-                        $template.find('#' + key).remove();
-                    } else if (viewModel[key] instanceof Function) {
-                        $template.find('#' + key)[0].onclick = bind(viewModel[key], viewModel);
-                        console.log('function');
+                    } else if ($element.length == 0) {
+                        continue;
+                    } else if (val instanceof Function) {
+                        $element[0].onclick = bind(val, viewModel);
                     } else {
-                        $template.find('#' + key).text(viewModel[key]);
-                        $template.find('#' + key + ':input').text(viewModel[key]);
+                        $element.text(val);
+                        $template.find('#' + key + ':input').val(val);
                     }
-                };
-
-                for (var _iterator = Object.getOwnPropertyNames(viewModel.__proto__)[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                    var elements;
-                    var items;
-
-                    var _ret = _loop();
-
-                    if (_ret === 'continue') continue;
                 }
             } catch (err) {
-                _didIteratorError = true;
-                _iteratorError = err;
+                _didIteratorError2 = true;
+                _iteratorError2 = err;
             } finally {
                 try {
-                    if (!_iteratorNormalCompletion && _iterator['return']) {
-                        _iterator['return']();
+                    if (!_iteratorNormalCompletion2 && _iterator2['return']) {
+                        _iterator2['return']();
                     }
                 } finally {
-                    if (_didIteratorError) {
-                        throw _iteratorError;
+                    if (_didIteratorError2) {
+                        throw _iteratorError2;
                     }
                 }
             }
@@ -130,8 +179,8 @@ var ViewModel = (function () {
         key: 'notifyOfPropertyChange',
         value: function notifyOfPropertyChange(propertyName) {
             console.log('' + propertyName + ' has been changed');
-            this._template.find('#' + propertyName).text(this[propertyName]);
-            this._template.find('#' + propertyName + ':input').val(this[propertyName]);
+            this._template.find('#{propertyName}').text(this[propertyName]);
+            this._template.find('#{propertyName}:input').val(this[propertyName]);
         }
     }]);
 
@@ -150,7 +199,7 @@ var LinkView = (function (_View) {
     _createClass(LinkView, [{
         key: 'getHtml',
         value: function getHtml() {
-            return '<div  class="list-group-item"> <h3 class="list-group-item-heading">   <span class="glyphicon glyphicon-plus-sign  pull-right" id="inrementRating"/><span id="link"/></h3><div> <h4 class="list-group-item-text"><span class="badge pull-right" id="rating"></span><span id="author"></span></h4>  </div>';
+            return '<div  class="list-group-item">\n                    <h3 class="list-group-item-heading">\n                        <span class="glyphicon glyphicon-plus-sign  pull-right" id="inrementRating"/>\n                        <span id="link"/>\n                    </h3>\n                    <h4 class="list-group-item-text">\n                        <span class="badge pull-right" id="rating"></span>\n                        <span id="author"></span>\n                    </h4>\n                </div>';
         }
     }]);
 
@@ -208,7 +257,7 @@ var LinksListView = (function (_View2) {
     _createClass(LinksListView, [{
         key: 'getHtml',
         value: function getHtml() {
-            return '<div><h1 id="header"/> <ul class="list-group"><foreach id="linksList"></ul></foreach> </div>';
+            return '<div>\n                    <h1 id="header"/> \n                    <ul class="list-group">\n                        <!-- foreach in linksList -->\n                        <!-- /foreach in linksList -->\n                    </ul>\n                </div>';
         }
     }]);
 

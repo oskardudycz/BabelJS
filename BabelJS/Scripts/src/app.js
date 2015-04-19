@@ -4,6 +4,46 @@
     }
 }
 
+// Thanks to Yoshi
+Node = Node || {
+    COMMENT_NODE: 8
+};
+
+function findComments(elem) {
+    var children = elem.childNodes;
+    var comments = [];
+
+    for (var i=0, len=children.length; i<len; i++) {
+        if (children[i].nodeType == Node.COMMENT_NODE) {
+            comments.push(children[i]);
+        }
+        if(children[i].childNodes.length >= 0){
+            comments = comments.concat(findComments(children[i]));
+        }
+    }
+    return comments;
+}
+
+function findBindingComments($elem, bindingName, variableName){
+    var comments = findComments($elem[0]);
+    var bindingCommentStart = ` ${bindingName} in ${variableName} `
+    var bindingCommentEnd = ` /${bindingName} in ${variableName} `
+
+
+    var startTag;
+    var endTag;
+
+    for(var comm of comments){
+        if(comm.nodeValue == bindingCommentStart)
+            startTag = comm;
+        else if (comm.nodeValue == bindingCommentEnd)
+            endTag = comm;
+    }
+
+    return [startTag, endTag];
+}
+
+
 class Excalibur {
     static Bind(rootViewModel, selector = '#exContainer') {
         var $jq = $(selector);
@@ -20,23 +60,28 @@ class Excalibur {
             if(key == 'constructor')
                 continue;
           
-            let val = viewModel[key];
             console.log(key);
           
-            if(viewModel[key] instanceof Array){
-                var elements = $('');
-                var items = viewModel[key].map(vm => Excalibur.RenderViewModel(vm));
-                items.forEach(f => $template.find('#' + key).before(f));
+            var $element = $template.find('#' + key);
+                                        
+            let val = viewModel[key];
 
-                $template.find('#' + key).remove();
+            if(val instanceof Array){
+                var tags = findBindingComments($template, 'foreach', key);
+                var $endTag = $(tags[1])
+
+                val.map(vm => Excalibur.RenderViewModel(vm))
+                   .forEach(f => $endTag.before(f));
             }          
-            else if(viewModel[key] instanceof Function){
-                $template.find('#' + key)[0].onclick = bind(viewModel[key], viewModel);
-                console.log('function');
+            else if($element.length == 0){
+                continue;
+            }
+            else if(val instanceof Function){
+                $element[0].onclick = bind(val, viewModel);
             }  
             else{
-                $template.find('#' + key).text(viewModel[key]);
-                $template.find('#' + key + ':input').text(viewModel[key]);
+                $element.text(val);
+                $template.find('#' + key + ':input').val(val);
             }
         }
         viewModel.bind($template);
@@ -59,8 +104,8 @@ class ViewModel {
     }
     notifyOfPropertyChange(propertyName){
         console.log(`${propertyName} has been changed`);
-        this._template.find('#' + propertyName).text(this[propertyName]);
-        this._template.find('#' + propertyName + ':input').val(this[propertyName]);
+        this._template.find(`#{propertyName}`).text(this[propertyName]);
+        this._template.find(`#{propertyName}:input`).val(this[propertyName]);
     }
 }
 
@@ -70,7 +115,16 @@ class LinkView extends View {
     }
 
     getHtml () {
-        return '<div  class="list-group-item"> <h3 class="list-group-item-heading">   <span class="glyphicon glyphicon-plus-sign  pull-right" id="inrementRating"/><span id="link"/></h3><div> <h4 class="list-group-item-text"><span class="badge pull-right" id="rating"></span><span id="author"></span></h4>  </div>';
+        return `<div  class="list-group-item">
+                    <h3 class="list-group-item-heading">
+                        <span class="glyphicon glyphicon-plus-sign  pull-right" id="inrementRating"/>
+                        <span id="link"/>
+                    </h3>
+                    <h4 class="list-group-item-text">
+                        <span class="badge pull-right" id="rating"></span>
+                        <span id="author"></span>
+                    </h4>
+                </div>`;
     }
 }
 
@@ -108,7 +162,13 @@ class LinksListView extends View {
     }
 
     getHtml () {
-        return '<div><h1 id="header"/> <ul class="list-group"><foreach id="linksList"></ul></foreach> </div>';
+        return `<div>
+                    <h1 id="header"/> 
+                    <ul class="list-group">
+                        <!-- foreach in linksList -->
+                        <!-- /foreach in linksList -->
+                    </ul>
+                </div>`;
     }
 }
 
